@@ -5,11 +5,13 @@ api_key = "1pASptoMl6xXHptBnpRfEG3KFU6ghqdU9pzDNs3WWaD9hXsL6LDW22imF99SZlFA"
 
 import sqlite3
 import requests
+import csv
 
 conn = sqlite3.connect("data.db")
 cursor = conn.cursor()
 query = "INSERT INTO event_matches VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
 cursor.execute("DELETE FROM event_matches")
+cursor.execute("DELETE FROM scouting")
 
 matches_data = requests.get(f"https://www.thebluealliance.com/api/v3/event/{event_key}/matches", headers={'X-TBA-AUTH-KEY':api_key}).json()
 #print(matches_data)
@@ -40,11 +42,23 @@ for row in matches:
                 """
                 INSERT
                 OR IGNORE INTO scouting
-                VALUES (?, ?, ?)
+                VALUES (?, ?, ?, ?)
                 """,
-                (match[0], match[2], row[i+3]),
+                (match[0], match[2], row[i+3], row[0]),
             )
     index += 1
+
+cursor.execute(f"SELECT * FROM scouting")
+headers = [description[0] for description in cursor.description]
+rows = cursor.fetchall()
+
+output_file = event_key + "_schedule.csv"
+with open(output_file, "w", newline="", encoding="utf-8") as f:
+    writer = csv.writer(f)
+    writer.writerow(headers)
+
+    writer.writerows(rows)
+
 
 conn.commit()
 conn.close()
