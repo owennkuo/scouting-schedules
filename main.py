@@ -1,5 +1,6 @@
 # DEFINITIONS
 event_key = "2026cacac"
+team_key = "frc5507"
 api_key = "1pASptoMl6xXHptBnpRfEG3KFU6ghqdU9pzDNs3WWaD9hXsL6LDW22imF99SZlFA"
 
 import sqlite3
@@ -23,11 +24,27 @@ cursor.execute("""SELECT * FROM event_matches
                   WHERE comp_level = 'qm'
                   AND 'frc5507' IN (R1, R2, R3, B1, B2, B3)
                   ORDER BY match_number""")
-for index, row in enumerate(cursor.fetchall()):
+matches = cursor.fetchall()
+index = 1
+# For each match with the target team key, find the last match for each opponent.
+for row in matches:
     for i in range(6):
-        if row[i+3] == "frc5507":
+        if row[i+3] == team_key:
             continue
-        cursor.execute(f"SELECT * FROM event_matches WHERE comp_level = 'qm' AND match_number < {index+1} AND '{row[i+3]}' IN (R1, R2, R3, B1, B2, B3) ORDER BY match_number DESC LIMIT 1")
-        print(row[i+3] + " for match " + row[0] + ": " + str(cursor.fetchone()))
+        cursor.execute(f"SELECT * FROM event_matches WHERE comp_level = 'qm' AND match_number < {row[2]} AND '{row[i+3]}' IN (R1, R2, R3, B1, B2, B3) ORDER BY match_number DESC LIMIT 1")
+        match = cursor.fetchone()
+        print(row[i+3] + " for match " + row[0] + ": " + str(match))
+        if match != None:
+            # Log the match into a separate table.
+            cursor.execute(
+                """
+                INSERT
+                OR IGNORE INTO scouting
+                VALUES (?, ?, ?)
+                """,
+                (match[0], match[2], row[i+3]),
+            )
+    index += 1
+
 conn.commit()
 conn.close()
